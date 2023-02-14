@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
@@ -18,6 +19,7 @@ async function run() {
   try {
     await client.connect();
     const serviceCollection = client.db("genuinCar").collection("service");
+    const orderCollection = client.db("genuinCar").collection("order");
     app.get("/service", async (req, res) => {
       const query = {};
       const cursor = serviceCollection.find(query);
@@ -41,6 +43,29 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await serviceCollection.deleteOne(query);
+      res.send(result);
+    });
+    //Auth
+    app.post("/login", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.TOKEN, {
+        expiresIn: "1d",
+      });
+      res.send({ token });
+    });
+    //order load from db
+    app.get("/order", async (req, res) => {
+      const email = req.query.email;
+
+      const query = { email };
+      const cursor = orderCollection.find(query);
+      const orders = await cursor.toArray();
+      res.send(orders);
+    });
+    //order collection api
+    app.post("/order", async (req, res) => {
+      const order = req.body;
+      const result = await orderCollection.insertOne(order);
       res.send(result);
     });
   } finally {
